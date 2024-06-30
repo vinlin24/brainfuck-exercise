@@ -20,33 +20,20 @@ To create a new Brainfuck interpreter implementation, create a subdirectory name
 
 However the source files are organized under this subdirectory is up to the implementer and should be done so in whatever way is required by and/or idiomatic to the programming language's module system.
 
-The only requirement is that the subdirectory have a **test.cfg** file at the top level under the subdirectory. For example:
+The only requirement is that the subdirectory have a **run.sh** file at the top level under the subdirectory. For example:
 
 ```
 perl/
-  test.cfg  <-- this file
+  run.sh  <-- this file
   brainfuck.pl
   interpreter.pm
 ```
 
-This declaratively defines how the [unit test driver](#test-driver) should invoke the implemented Brainfuck interpreter.
+This defines the code to be run by the [unit test driver](#test-driver) to pass Brainfuck source files into the implemented Brainfuck interpreter. The path to the Brainfuck source file will be passed as the first command-line argument i.e. `$1` to **run.sh**.
 
-> [!NOTE]
+> [!WARNING]
 >
-> At the moment, only interpreted languages are supported. Below is the current format of the **test.cfg** file:
-
-```ini
-[Interpreter]
-# The shell command to use to invoke the host language interpreter.
-command=
-# CLI options to directly follow the host language interpreter command.
-options=
-
-[Program]
-# Path to the Brainfuck interpreter entry point source file, relative to the
-# LANGUAGE SUBDIRECTORY e.g. `brainfuck.py` for `python3/brainfuck.py`.
-entry_point=
-```
+> Obviously, if this weren't just my personal repository, allowing arbitrary executable code would be a huge security smell. It may be better to define a **declarative** system of configuring how to boot up the implementation language's compiler/interpreter, but this suffices for now.
 
 ## Testing
 

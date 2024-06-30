@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Unit tester for Brainfuck interpreter implementations."""
 
-import configparser
 import subprocess
 import unittest
 from argparse import ArgumentParser
@@ -13,14 +12,6 @@ from typing import Iterable, Type
 TESTER_PATH = Path(__file__)
 TESTS_DIRECTORY = TESTER_PATH.parent
 PROJECT_DIRECTORY = TESTS_DIRECTORY.parent
-
-
-@dataclass
-class LanguageConfig:
-    language_name: str
-    interpreter_command: str
-    interpreter_options: str
-    entry_point: str
 
 
 @dataclass
@@ -71,17 +62,18 @@ def get_test_cases() -> list[TestCaseConfig]:
 
 
 def create_interpreter_test_case(
-    language_config: LanguageConfig,
+    language_directory: Path,
     test_case_config: TestCaseConfig,
 ) -> Type[unittest.TestCase]:
     class TestInterpreterTestCase(unittest.TestCase):
         def _run_interpreter(self) -> subprocess.CompletedProcess[bytes]:
-            return subprocess.run([
-                language_config.interpreter_command,
-                *(language_config.interpreter_options.split()),
-                language_config.entry_point,
-                test_case_config.source_path,
-            ],
+            run_script = language_directory / "run.sh"
+            return subprocess.run(
+                # NOTE: I would've liked to be able to run the script
+                # directly and let the shebang specify the interpreter,
+                # but that causes WinError 193 on Windows. Thus, we
+                # hard-code `bash` an the run script interpreter.
+                ["bash", str(run_script), test_case_config.source_path],
                 check=False,
                 capture_output=True,
             )
@@ -102,16 +94,16 @@ def create_interpreter_test_case(
 
 
 def create_all_test_cases_for_language(
-    language_config: LanguageConfig,
+    language_name: str,
 ) -> list[Type[unittest.TestCase]]:
-    language_name = language_config.language_name
     test_case_configs = get_test_cases()
 
     test_case_classes = list[Type[unittest.TestCase]]()
 
     for test_case_config in test_case_configs:
+        language_directory = PROJECT_DIRECTORY / language_name
         test_case_class = create_interpreter_test_case(
-            language_config,
+            language_directory,
             test_case_config,
         )
 
@@ -176,26 +168,6 @@ def init_parser(implementation_directories: list[str]) -> ArgumentParser:
     return parser
 
 
-def load_language_config(directory_name: str) -> LanguageConfig:
-    directory_path = PROJECT_DIRECTORY / directory_name
-    config_path = directory_path / "test.cfg"
-
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    entry_point_relative_to_language = config["Program"]["entry_point"]
-    entry_point_relative_to_project = str(
-        directory_path / entry_point_relative_to_language
-    )
-
-    return LanguageConfig(
-        language_name=directory_name,
-        interpreter_command=config["Interpreter"]["command"],
-        interpreter_options=config["Interpreter"]["options"],
-        entry_point=entry_point_relative_to_project,
-    )
-
-
 def main() -> None:
     implementation_directories = discover_implementation_directories()
     parser = init_parser(implementation_directories)
@@ -209,8 +181,7 @@ def main() -> None:
 
     test_case_classes_to_use = list[Type[unittest.TestCase]]()
     for directory_name in language_directories:
-        language_config = load_language_config(directory_name)
-        test_case_classes = create_all_test_cases_for_language(language_config)
+        test_case_classes = create_all_test_cases_for_language(directory_name)
         test_case_classes_to_use.extend(test_case_classes)
 
     run_unit_tests(test_case_classes_to_use, verbose)
