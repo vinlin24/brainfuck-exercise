@@ -1,0 +1,86 @@
+# Brainfuck Exercise
+
+My implementations of an interpreter for the esoteric [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) programming language, intended as learning exercises for picking up new programming languages. They also double as notebooks via code comments detailing certain language features/quirks I found particularly notable.
+
+Implementations follow [this Brainfuck spec](https://github.com/sunjay/brainfuck/blob/master/brainfuck.md).
+
+## Motivation
+
+I once read that implementing a Brainfuck interpreter is a great starter project for learning a new programming language. It forces one to learn essential features like:
+
+- I/O (processing command line arguments, reading files, formatting output, etc.).
+- Data structures (using a stack and hashmap to implement bracket jumping comes to mind).
+- Control flow (will likely have to use all of for/foreach loop, while loop, early return, error handling, etc. constructs).
+- State management (an interpreter has quite a bit of internal state, motivating the use of OOP or similar constructs).
+- Splitting the implementation into multiple files for modularity (optional).
+
+## Implementations
+
+To create a new Brainfuck interpreter implementation, create a subdirectory named after the programming language to use.
+
+However the source files are organized under this subdirectory is up to the implementer and should be done so in whatever way is required by and/or idiomatic to the programming language's module system.
+
+The only requirement is that the subdirectory have a **test.cfg** file at the top level under the subdirectory. For example:
+
+```
+perl/
+  test.cfg  <-- this file
+  brainfuck.pl
+  interpreter.pm
+```
+
+This declaratively defines how the [unit test driver](#test-driver) should invoke the implemented Brainfuck interpreter.
+
+> [!NOTE]
+>
+> At the moment, only interpreted languages are supported. Below is the current format of the **test.cfg** file:
+
+```ini
+[Interpreter]
+# The shell command to use to invoke the host language interpreter.
+command=
+# CLI options to directly follow the host language interpreter command.
+options=
+
+[Program]
+# Path to the Brainfuck interpreter entry point source file, relative to the
+# LANGUAGE SUBDIRECTORY e.g. `brainfuck.py` for `python3/brainfuck.py`.
+entry_point=
+```
+
+## Testing
+
+A test suite is set up under [tests/](tests/).
+
+### Test Driver
+
+The [driver script](tests/test_interpreter.py) is written in Python, but it is agnostic of the language used to implement the interpreter being tested. This is because it invokes the implemented interpreter as a subprocess and compares its output instead of attempting to import any implementations directly. This makes it a central test site to drive the (test-driven) development of Brainfuck interpreters in any implementation language.
+
+To run the full test suite (all test cases for all implementations):
+
+```sh
+python tests/test_interpreter.py
+```
+
+To run the test cases for only specific implementations, specify the names of their directories e.g.:
+
+```sh
+python tests/test_interpreter.py perl python3
+```
+
+The `-v`/`--verbose` flag forwards the verbosity setting to the underlying [unittest](https://docs.python.org/3/library/unittest.html) framework.
+
+As usual, use `--help` for general help on the tester CLI.
+
+### Test Cases
+
+Test case files are included at the top-level under [tests/](tests/) as well. The [driver script](#test-driver) dynamically loads test case information from these files on startup to construct test suites. A test case consists of:
+
+| File Name     | Description                                        |
+| ------------- | -------------------------------------------------- |
+| test_name.bf  | Brainfuck source file                              |
+| test_name.out | Expected stdout of Brainfuck program (optional)    |
+| test_name.err | Expected exit code of Brainfuck program (optional) |
+
+- If the expected stdout file is omitted, the driver will assume the Brainfuck program has no stdout output.
+- If the exit code file is omitted, the driver will assume the Brainfuck program exits with 0 (success).
