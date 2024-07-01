@@ -1,6 +1,6 @@
 # Brainfuck Exercise
 
-My implementations of an interpreter for the esoteric [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) programming language, intended as learning exercises for picking up new programming languages. They also double as notebooks via code comments detailing certain language features/quirks I found particularly notable.
+My implementations of an interpreter for the esoteric [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) programming language, intended as learning exercises for picking up new programming languages (or just a time-killer for languages I am already familiar with). They also double as notebooks via code comments detailing certain language features/quirks I found particularly notable.
 
 Implementations follow [this Brainfuck spec](https://github.com/sunjay/brainfuck/blob/master/brainfuck.md).
 
