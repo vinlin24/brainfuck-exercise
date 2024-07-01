@@ -23,42 +23,48 @@ class TestCaseConfig:
 
 
 def get_test_cases() -> list[TestCaseConfig]:
+    source_paths = [
+        path for path in TESTS_DIRECTORY.iterdir()
+        if path.suffix == ".bf"
+    ]
     test_cases = list[TestCaseConfig]()
-
-    source_paths = set[Path]()
-    stdout_paths = set[Path]()
-    error_code_paths = set[Path]()
-
-    for element_path in TESTS_DIRECTORY.iterdir():
-        if element_path.suffix == ".bf":
-            source_paths.add(element_path)
-        elif element_path.suffix == ".out":
-            stdout_paths.add(element_path)
-        elif element_path.suffix == ".err":
-            error_code_paths.add(element_path)
 
     for source_path in source_paths:
         stdout_path = source_path.with_suffix(".out")
-        if stdout_path in stdout_paths:
+        if stdout_path.is_file():
             expected_stdout = stdout_path.read_text("utf-8")
         else:
             expected_stdout = ""
 
         error_code_path = source_path.with_suffix(".err")
-        if error_code_path in error_code_paths:
+        if error_code_path.is_file():
             expected_exit = int(error_code_path.read_text("utf-8"))
         else:
             expected_exit = 0
 
-        test_case = TestCaseConfig(
+        test_cases.append(TestCaseConfig(
             test_name=source_path.stem,
             source_path=str(source_path),
             expected_stdout=expected_stdout,
             expected_exit=expected_exit,
-        )
-        test_cases.append(test_case)
+        ))
 
     return test_cases
+
+
+def execute_shell_script(
+    script_path: str | Path,
+    *arguments: str,
+) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        # NOTE: I would've liked to be able to run the script directly
+        # and let the shebang specify the interpreter, but that causes
+        # WinError 193 on Windows. Thus, we hard-code `bash` as the
+        # interpreter for all shell scripts.
+        ["bash", script_path, *arguments],
+        check=False,
+        capture_output=True,
+    )
 
 
 def create_interpreter_test_case(
@@ -73,15 +79,8 @@ def create_interpreter_test_case(
     class TestInterpreterTestCase(unittest.TestCase):
         def _run_interpreter(self) -> subprocess.CompletedProcess[bytes]:
             run_script = language_directory / "run.sh"
-            return subprocess.run(
-                # NOTE: I would've liked to be able to run the script
-                # directly and let the shebang specify the interpreter,
-                # but that causes WinError 193 on Windows. Thus, we
-                # hard-code `bash` an the run script interpreter.
-                ["bash", str(run_script), test_case_config.source_path],
-                check=False,
-                capture_output=True,
-            )
+            brainfuck_source_path = test_case_config.source_path
+            return execute_shell_script(run_script, brainfuck_source_path)
 
         def test_case(self) -> None:
             process = self._run_interpreter()
@@ -98,7 +97,10 @@ def create_interpreter_test_case(
     return TestInterpreterTestCase
 
 
-def run_language_setup_if_exists(language_directory: Path) -> str | None:
+def run_language_setup_if_exists(
+    language_directory: Path,
+    verbose: bool,
+) -> str | None:
     """
     Run the language directory's set up script, if exists. Return `None`
     if it succeeds or the script does not exist (skipped). Otherwise,
@@ -106,14 +108,14 @@ def run_language_setup_if_exists(language_directory: Path) -> str | None:
     """
     setup_script = language_directory / "setup.sh"
 
-    if not setup_script.exists():
+    if not setup_script.is_file():
         return None
 
-    process = subprocess.run(
-        ["bash", setup_script],
-        check=False,
-        capture_output=True,
-    )
+    if verbose:
+        print(f"Running {setup_script} ... ", end="")
+    process = execute_shell_script(setup_script)
+    if verbose:
+        print("Done.")
 
     if process.returncode != 0:
         return process.stderr.decode("utf-8")
@@ -122,9 +124,10 @@ def run_language_setup_if_exists(language_directory: Path) -> str | None:
 
 def create_all_test_cases_for_language(
     language_name: str,
+    verbose: bool,
 ) -> list[Type[unittest.TestCase]]:
     language_directory = PROJECT_DIRECTORY / language_name
-    setup_error = run_language_setup_if_exists(language_directory)
+    setup_error = run_language_setup_if_exists(language_directory, verbose)
 
     test_case_configs = get_test_cases()
     test_case_classes = list[Type[unittest.TestCase]]()
@@ -210,7 +213,10 @@ def main() -> None:
 
     test_case_classes_to_use = list[Type[unittest.TestCase]]()
     for directory_name in language_directories:
-        test_case_classes = create_all_test_cases_for_language(directory_name)
+        test_case_classes = create_all_test_cases_for_language(
+            directory_name,
+            verbose,
+        )
         test_case_classes_to_use.extend(test_case_classes)
 
     run_unit_tests(test_case_classes_to_use, verbose)
