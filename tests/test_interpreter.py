@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Unit tester for Brainfuck interpreter implementations."""
+"""Integration tester for Brainfuck interpreter implementations."""
 
 import subprocess
 import unittest
@@ -64,7 +64,12 @@ def get_test_cases() -> list[TestCaseConfig]:
 def create_interpreter_test_case(
     language_directory: Path,
     test_case_config: TestCaseConfig,
+    setup_error: str | None = None,
 ) -> Type[unittest.TestCase]:
+    @unittest.skipIf(
+        setup_error is not None,
+        reason=f"Setup script errored: {setup_error}",
+    )
     class TestInterpreterTestCase(unittest.TestCase):
         def _run_interpreter(self) -> subprocess.CompletedProcess[bytes]:
             run_script = language_directory / "run.sh"
@@ -93,18 +98,42 @@ def create_interpreter_test_case(
     return TestInterpreterTestCase
 
 
+def run_language_setup_if_exists(language_directory: Path) -> str | None:
+    """
+    Run the language directory's set up script, if exists. Return `None`
+    if it succeeds or the script does not exist (skipped). Otherwise,
+    return the stderr of the subprocess.
+    """
+    setup_script = language_directory / "setup.sh"
+
+    if not setup_script.exists():
+        return None
+
+    process = subprocess.run(
+        ["bash", setup_script],
+        check=False,
+        capture_output=True,
+    )
+
+    if process.returncode != 0:
+        return process.stderr.decode("utf-8")
+    return None
+
+
 def create_all_test_cases_for_language(
     language_name: str,
 ) -> list[Type[unittest.TestCase]]:
-    test_case_configs = get_test_cases()
+    language_directory = PROJECT_DIRECTORY / language_name
+    setup_error = run_language_setup_if_exists(language_directory)
 
+    test_case_configs = get_test_cases()
     test_case_classes = list[Type[unittest.TestCase]]()
 
     for test_case_config in test_case_configs:
-        language_directory = PROJECT_DIRECTORY / language_name
         test_case_class = create_interpreter_test_case(
             language_directory,
             test_case_config,
+            setup_error,
         )
 
         test_case_name = test_case_config.test_name

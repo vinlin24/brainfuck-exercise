@@ -29,30 +29,39 @@ perl/
   interpreter.pm
 ```
 
-This defines the code to be run by the [unit test driver](#test-driver) to pass Brainfuck source files into the implemented Brainfuck interpreter. The path to the Brainfuck source file will be passed as the first command-line argument i.e. `$1` to **run.sh**.
+This defines the code to be run by the [test driver](#test-driver) to pass Brainfuck source files into the implemented Brainfuck interpreter. The path to the Brainfuck source file will be passed as the first command-line argument i.e. `$1` to **run.sh**.
 
 > [!WARNING]
 >
 > Obviously, if this weren't just my personal repository, allowing arbitrary executable code would be a huge security smell. It may be better to define a **declarative** system of configuring how to boot up the implementation language's compiler/interpreter, but this suffices for now.
 
+There may also be an optional **setup.sh** file, which is run *once* before testing the individual test cases for a particular implementation. This serves as a hook for compiled languages to build their binary. **setup.sh** will be called with no command line arguments.
+
 ## Testing
 
-A test suite is set up under [tests/](tests/).
+An integration test suite is set up under [tests/](tests/).
 
 ### Test Driver
 
-The [driver script](tests/test_interpreter.py) is written in Python, but it is agnostic of the language used to implement the interpreter being tested. This is because it invokes the implemented interpreter as a subprocess and compares its output instead of attempting to import any implementations directly. This makes it a central test site to drive the (test-driven) development of Brainfuck interpreters in any implementation language.
+The [driver script](tests/test_interpreter.py) is written in Python, but it is agnostic of the language used to implement the interpreter being tested. This is because it invokes the implemented interpreter as a subprocess and compares its output instead of attempting to import any implementations directly. This makes it a central test site to drive the (test-driven) development of Brainfuck interpreters in any implementation language. The lifecycle of the test cases, [as described above](#implementations), is:
+
+```
+For each language directory:
+    Run its setup script, if exists.
+    For each test case:
+        Run its run script.
+```
 
 To run the full test suite (all test cases for all implementations):
 
 ```sh
-python tests/test_interpreter.py
+tests/test_interpreter.py
 ```
 
 To run the test cases for only specific implementations, specify the names of their directories e.g.:
 
 ```sh
-python tests/test_interpreter.py perl python3
+tests/test_interpreter.py perl python3
 ```
 
 The `-v`/`--verbose` flag forwards the verbosity setting to the underlying [unittest](https://docs.python.org/3/library/unittest.html) framework.
