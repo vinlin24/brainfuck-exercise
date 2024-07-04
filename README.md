@@ -72,11 +72,13 @@ As usual, use `--help` for general help on the tester CLI.
 
 Test case files are included at the top-level under [tests/](tests/) as well. The [driver script](#test-driver) dynamically loads test case information from these files on startup to construct test suites. A test case consists of:
 
-| File Name     | Description                                        |
-| ------------- | -------------------------------------------------- |
-| test_name.bf  | Brainfuck source file                              |
-| test_name.out | Expected stdout of Brainfuck program (optional)    |
-| test_name.err | Expected exit code of Brainfuck program (optional) |
+| File Name     | Description                                           |
+| ------------- | ----------------------------------------------------- |
+| test_name.bf  | Brainfuck source file                                 |
+| test_name.out | Expected stdout of Brainfuck program (optional)       |
+| test_name.err | Expected exit code of Brainfuck program (optional)    |
+| test_name.in  | Raw stdin to feed to the Brainfuck program (optional) |
 
 - If the expected stdout file is omitted, the driver will assume the Brainfuck program has no stdout output.
 - If the exit code file is omitted, the driver will assume the Brainfuck program exits with 0 (success).
+- If the stdin file is omitted, the driver will not provide any input to the Brainfuck program.

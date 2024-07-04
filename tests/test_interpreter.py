@@ -18,6 +18,7 @@ PROJECT_DIRECTORY = TESTS_DIRECTORY.parent
 class TestCaseConfig:
     test_name: str
     source_path: str
+    stdin_bytes: bytes | None
     expected_stdout: str
     expected_exit: int
 
@@ -42,9 +43,16 @@ def get_test_cases() -> list[TestCaseConfig]:
         else:
             expected_exit = 0
 
+        stdin_path = source_path.with_suffix(".in")
+        if stdin_path.is_file():
+            stdin_bytes = stdin_path.read_bytes()
+        else:
+            stdin_bytes = None
+
         test_cases.append(TestCaseConfig(
             test_name=source_path.stem,
             source_path=str(source_path),
+            stdin_bytes=stdin_bytes,
             expected_stdout=expected_stdout,
             expected_exit=expected_exit,
         ))
@@ -55,6 +63,7 @@ def get_test_cases() -> list[TestCaseConfig]:
 def execute_shell_script(
     script_path: str | Path,
     *arguments: str,
+    stdin_bytes: bytes | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         # NOTE: I would've liked to be able to run the script directly
@@ -64,6 +73,7 @@ def execute_shell_script(
         ["bash", script_path, *arguments],
         check=False,
         capture_output=True,
+        input=stdin_bytes,
     )
 
 
@@ -80,7 +90,11 @@ def create_interpreter_test_case(
         def _run_interpreter(self) -> subprocess.CompletedProcess[bytes]:
             run_script = language_directory / "run.sh"
             brainfuck_source_path = test_case_config.source_path
-            return execute_shell_script(run_script, brainfuck_source_path)
+            return execute_shell_script(
+                run_script,
+                brainfuck_source_path,
+                stdin_bytes=test_case_config.stdin_bytes,
+            )
 
         def test_case(self) -> None:
             process = self._run_interpreter()
