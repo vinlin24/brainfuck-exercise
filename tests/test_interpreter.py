@@ -184,12 +184,10 @@ def run_unit_tests(
 
 
 def discover_implementation_directories() -> list[str]:
-    directory_names = list[str]()
-    for element_path in PROJECT_DIRECTORY.iterdir():
-        if not element_path.is_dir() or element_path.name in {"tests", ".git"}:
-            continue
-        directory_names.append(element_path.name)
-    return directory_names
+    return [
+        path.name for path in PROJECT_DIRECTORY.iterdir()
+        if path.is_dir() and path.name not in {"tests", ".git"}
+    ]
 
 
 def init_parser(implementation_directories: list[str]) -> ArgumentParser:
