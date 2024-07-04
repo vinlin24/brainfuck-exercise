@@ -242,12 +242,12 @@ sub _write_cell_to_stdout {
 sub _replace_cell_with_stdin {
     my ($self) = @_;
 
-    my $input_byte;
+    my $input_character;
 
     # Note the similarity to C system calls. We pass as an argument a variable
     # to initialize while the function return value is used for status checking.
-    if ( read( STDIN, $input_byte, 1 ) == 1 ) {
-        $self->{_cells}[ $self->{_pointer} ] = $input_byte;
+    if ( read( STDIN, $input_character, 1 ) == 1 ) {
+        $self->{_cells}[ $self->{_pointer} ] = ord($input_character);
     }
     else {
         die "Error reading from stdin: $!\n";

@@ -49,9 +49,9 @@ sub load_source_file {
     open( my $source_fh, "<", $source_path )
       or die "Cannot open $source_path for reading: $!\n";
 
-    # I/O: a file handle `<fh>` in scalar context automatically reads the entire
-    # buffer into the scalar string.
-    my $source = <$source_fh>;
+    # Slurping a file doesn't seem to be straightforward... This one-liner
+    # comes from https://stackoverflow.com/a/206681/14226122.
+    my $source = do { local ($/); <$source_fh> };
 
     close($source_fh);
 
