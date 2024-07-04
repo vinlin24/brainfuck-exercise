@@ -186,7 +186,9 @@ def run_unit_tests(
 def discover_implementation_directories() -> list[str]:
     return [
         path.name for path in PROJECT_DIRECTORY.iterdir()
-        if path.is_dir() and path.name not in {"tests", ".git"}
+        if path.is_dir()                   # Exclude regular files.
+        and path.name != "tests"           # Exclude this directory.
+        and not path.name.startswith(".")  # Exclude special e.g. .git.
     ]
 
 
