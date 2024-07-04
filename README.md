@@ -12,13 +12,16 @@ I once read that implementing a Brainfuck interpreter is a great starter project
 - Data structures (using a stack and hashmap to implement bracket jumping comes to mind).
 - Control flow (will likely have to use all of for/foreach loop, while loop, early return, error handling, etc. constructs).
 - State management (an interpreter has quite a bit of internal state, motivating the use of OOP or similar constructs).
-- Splitting the implementation into multiple files for modularity (optional).
+- Optionally splitting the implementation into multiple files for modularity (which would entail understanding the language's module/import/build system).
+- The DevOps side of the language (how to set up & use the compiler/interpreter, how to [integrate it into scripting](#test-hooks), etc.).
 
 ## Implementations
 
 To create a new Brainfuck interpreter implementation, create a subdirectory named after the programming language to use.
 
 However the source files are organized under this subdirectory is up to the implementer and should be done so in whatever way is required by and/or idiomatic to the programming language's module system.
+
+### Test Hooks
 
 The only requirement is that the subdirectory have a **run.sh** file at the top level under the subdirectory. For example:
 
