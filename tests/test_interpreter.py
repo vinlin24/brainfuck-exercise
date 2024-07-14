@@ -3,6 +3,7 @@
 """Integration tester for Brainfuck interpreter implementations."""
 
 import subprocess
+import sys
 import unittest
 from argparse import ArgumentParser
 from dataclasses import dataclass
@@ -80,12 +81,9 @@ def execute_shell_script(
 def create_interpreter_test_case(
     language_directory: Path,
     test_case_config: TestCaseConfig,
-    setup_error: str | None = None,
+    setup_errored: bool = False,
 ) -> Type[unittest.TestCase]:
-    @unittest.skipIf(
-        setup_error is not None,
-        reason=f"Setup script errored: {setup_error}",
-    )
+    @unittest.skipIf(setup_errored, reason="Setup script errored")
     class TestInterpreterTestCase(unittest.TestCase):
         def _run_interpreter(self) -> subprocess.CompletedProcess[bytes]:
             run_script = language_directory / "run.sh"
@@ -129,7 +127,7 @@ def run_language_setup_if_exists(
         print(f"Running {setup_script} ... ", end="")
     process = execute_shell_script(setup_script)
     if verbose:
-        print("Done.")
+        print("Done." if process.returncode == 0 else "ERROR.")
 
     if process.returncode != 0:
         return process.stderr.decode("utf-8")
@@ -143,6 +141,10 @@ def create_all_test_cases_for_language(
     language_directory = PROJECT_DIRECTORY / language_name
     setup_error = run_language_setup_if_exists(language_directory, verbose)
 
+    if setup_error is not None:
+        print(f"SETUP FOR {language_name} FAILED:", file=sys.stderr)
+        print(setup_error, file=sys.stderr)
+
     test_case_configs = get_test_cases()
     test_case_classes = list[Type[unittest.TestCase]]()
 
@@ -150,7 +152,7 @@ def create_all_test_cases_for_language(
         test_case_class = create_interpreter_test_case(
             language_directory,
             test_case_config,
-            setup_error,
+            setup_error is not None,
         )
 
         test_case_name = test_case_config.test_name
@@ -164,8 +166,8 @@ def create_all_test_cases_for_language(
 def run_unit_tests(
     test_suite_classes: Iterable[Type[unittest.TestCase]],
     verbose: bool,
-) -> None:
-    """Start the unittest runtime.
+) -> bool:
+    """Start the unittest runtime. Return if all tests were successful.
 
     Note that we cannot just use `unittest.main()` since that parses
     command line arguments, interfering with our argparse CLI.
@@ -180,7 +182,16 @@ def run_unit_tests(
     all_tests_suite = unittest.TestSuite(test_suites)
 
     test_runner = unittest.TextTestRunner(verbosity=(2 if verbose else 1))
-    test_runner.run(all_tests_suite)
+    result = test_runner.run(all_tests_suite)
+
+    # Can't just use result.wasSuccessful() since that also includes
+    # skipped tests.
+    all_successful = (
+        not result.skipped and
+        not result.failures and
+        not result.errors
+    )
+    return all_successful
 
 
 def discover_implementation_directories() -> list[str]:
@@ -214,7 +225,7 @@ def init_parser(implementation_directories: list[str]) -> ArgumentParser:
     return parser
 
 
-def main() -> None:
+def main() -> int:
     implementation_directories = discover_implementation_directories()
     parser = init_parser(implementation_directories)
     args = parser.parse_args()
@@ -233,8 +244,9 @@ def main() -> None:
         )
         test_case_classes_to_use.extend(test_case_classes)
 
-    run_unit_tests(test_case_classes_to_use, verbose)
+    all_successful = run_unit_tests(test_case_classes_to_use, verbose)
+    return 0 if all_successful else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
