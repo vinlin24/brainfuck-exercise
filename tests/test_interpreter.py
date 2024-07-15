@@ -218,9 +218,14 @@ def init_parser(implementation_directories: list[str]) -> ArgumentParser:
         choices=["all"] + implementation_directories,
     )
     parser.add_argument(
-        "-v",
-        "--verbose",
+        "-v", "--verbose",
         action="store_true",
+        help="forward verbose setting to underlying unittest framework",
+    )
+    parser.add_argument(
+        "-i", "--invert", "-x", "--exclude",
+        action="store_true",
+        help="provided language arguments become an exclude list instead",
     )
     return parser
 
@@ -232,9 +237,13 @@ def main() -> int:
 
     language_directories: list[str] = args.language_directories
     verbose: bool = args.verbose
+    invert: bool = args.invert
 
     if "all" in language_directories:
         language_directories = implementation_directories
+    if invert:
+        language_directories = [name for name in implementation_directories
+                                if name not in language_directories]
 
     test_case_classes_to_use = list[Type[unittest.TestCase]]()
     for directory_name in language_directories:
